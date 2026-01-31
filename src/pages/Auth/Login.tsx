@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
-import { Stethoscope, User, ArrowRight, Shield, Lock, KeyRound } from 'lucide-react';
+import { Stethoscope, User, Shield, Lock, KeyRound } from 'lucide-react';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [role, setRole] = useState<UserRole>(UserRole.NONE);
-  
+  const { login } = useAuth();
+
+  // Tab State: Default to PATIENT
+  const [activeTab, setActiveTab] = useState<UserRole>(UserRole.PATIENT);
+
   // Auth States
   const [patientIdInput, setPatientIdInput] = useState('');
   const [patientOtpSent, setPatientOtpSent] = useState(false);
@@ -17,37 +22,40 @@ const Login: React.FC = () => {
   // Handlers
   const handlePatientLogin = () => {
     if (!patientIdInput.trim()) {
-      alert("Please enter your Patient ID");
+      toast.error("Please enter your Patient ID");
       return;
     }
     if (!patientOtpSent) {
       setPatientOtpSent(true);
-      setTimeout(() => alert("Your OTP is: 1234"), 500); // Simulation
+      setTimeout(() => toast.success("OTP sent! (Code: 1234)"), 500);
     } else {
       if (patientOtp === '1234') {
-        navigate('/patient/dashboard', { state: { patientId: patientIdInput } });
+        login(UserRole.PATIENT, { patientId: patientIdInput });
+        toast.success("Welcome back!");
+        navigate('/patient/dashboard');
       } else {
-        alert("Invalid OTP");
+        toast.error("Invalid OTP");
       }
     }
   };
 
   const handleDoctorLogin = () => {
     if (doctorPass.length > 3) {
-      // Simulate simple auth check
+      login(UserRole.DOCTOR, { name: "Dr. S. Miller" });
+      toast.success("Welcome, Doctor.");
       navigate('/doctor/dashboard');
     } else {
-      alert("Please enter a valid password (min 4 chars)");
+      toast.error("Incorrect Password (min 4 chars)");
     }
   };
 
-  const resetRole = () => {
-      setRole(UserRole.NONE);
-      setPatientOtpSent(false);
-      setPatientOtp('');
-      setDoctorPass('');
-      setPatientIdInput('');
-  }
+  const switchTab = (role: UserRole) => {
+    setActiveTab(role);
+    // Reset inputs on tab switch to avoid confusion
+    setPatientOtpSent(false);
+    setPatientOtp('');
+    setDoctorPass('');
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
@@ -58,7 +66,7 @@ const Login: React.FC = () => {
       </div>
 
       <div className="w-full max-w-4xl z-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-        
+
         {/* Intro Section */}
         <div className="flex flex-col justify-center text-center md:text-left space-y-6">
           <div className="inline-flex items-center gap-2 self-center md:self-start bg-slate-800/50 backdrop-blur border border-slate-700 px-4 py-2 rounded-full">
@@ -74,62 +82,55 @@ const Login: React.FC = () => {
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col justify-center space-y-8 min-h-[400px]">
-          {role === UserRole.NONE ? (
-            <>
-              <h2 className="text-2xl font-bold text-slate-900 text-center">Choose Portal</h2>
-              <div className="grid grid-cols-1 gap-4">
-                <button 
-                  onClick={() => setRole(UserRole.PATIENT)}
-                  className="group relative p-6 rounded-2xl border-2 border-slate-100 hover:border-teal-500 hover:bg-teal-50 transition-all text-left flex items-center gap-4"
-                >
-                  <div className="w-12 h-12 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-                    <User className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900">Patient Access</h3>
-                    <p className="text-sm text-slate-500">Track progress & adherence</p>
-                  </div>
-                  <ArrowRight className="ml-auto w-5 h-5 text-slate-300 group-hover:text-teal-500" />
-                </button>
+        <div className="bg-white rounded-3xl p-8 shadow-2xl flex flex-col min-h-[400px]">
 
-                <button 
-                  onClick={() => setRole(UserRole.DOCTOR)}
-                  className="group relative p-6 rounded-2xl border-2 border-slate-100 hover:border-blue-500 hover:bg-blue-50 transition-all text-left flex items-center gap-4"
-                >
-                  <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl group-hover:scale-110 transition-transform">
-                    <Stethoscope className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900">Doctor Dashboard</h3>
-                    <p className="text-sm text-slate-500">AI Analytics & Prescriptions</p>
-                  </div>
-                  <ArrowRight className="ml-auto w-5 h-5 text-slate-300 group-hover:text-blue-500" />
-                </button>
-              </div>
-            </>
-          ) : role === UserRole.PATIENT ? (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+          {/* Tab Switcher */}
+          <div className="bg-slate-100 p-1 rounded-xl flex mb-8">
+            <button
+              onClick={() => switchTab(UserRole.PATIENT)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === UserRole.PATIENT
+                  ? 'bg-white text-teal-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              <User className="w-4 h-4" />
+              Patient
+            </button>
+            <button
+              onClick={() => switchTab(UserRole.DOCTOR)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === UserRole.DOCTOR
+                  ? 'bg-white text-blue-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              <Stethoscope className="w-4 h-4" />
+              Doctor
+            </button>
+          </div>
+
+          {/* Patient Form */}
+          {activeTab === UserRole.PATIENT && (
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
               <div className="text-center">
                 <div className="w-16 h-16 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Lock className="w-8 h-8" />
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900">Secure Patient Login</h2>
                 <p className="text-slate-500 text-sm mt-1">
-                  {patientOtpSent ? "Enter the code sent to your device." : "Verify your identity to continue."}
+                  {patientOtpSent ? "Enter the code sent to your device." : "Verify your identity."}
                 </p>
               </div>
 
               {!patientOtpSent ? (
                 <div className="space-y-4">
-                   <input 
-                      type="text" 
-                      placeholder="Patient ID (Try '1')" 
-                      value={patientIdInput}
-                      onChange={(e) => setPatientIdInput(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500" 
-                    />
-                   <button 
+                  <input
+                    type="text"
+                    placeholder="Patient ID (Try '1')"
+                    value={patientIdInput}
+                    onChange={(e) => setPatientIdInput(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <button
                     onClick={handlePatientLogin}
                     className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl transition-colors"
                   >
@@ -138,58 +139,59 @@ const Login: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                   <div className="text-center text-sm text-slate-500 mb-2">Patient ID: <span className="font-bold text-slate-800">{patientIdInput}</span></div>
-                   <input 
-                    type="text" 
-                    placeholder="Enter OTP (1234)" 
+                  <div className="text-center text-sm text-slate-500 mb-2">Patient ID: <span className="font-bold text-slate-800">{patientIdInput}</span></div>
+                  <input
+                    type="text"
+                    placeholder="Enter OTP (1234)"
                     value={patientOtp}
                     onChange={(e) => setPatientOtp(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 text-center tracking-widest text-lg font-bold" 
-                   />
-                   <button 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-teal-500 text-center tracking-widest text-lg font-bold"
+                  />
+                  <button
                     onClick={handlePatientLogin}
                     className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl transition-colors"
                   >
                     Verify & Enter
                   </button>
+                  <button onClick={() => setPatientOtpSent(false)} className="w-full text-teal-600 text-sm hover:underline">Change ID</button>
                 </div>
               )}
-              
-              <button onClick={resetRole} className="w-full text-slate-400 text-sm hover:text-slate-600">Back</button>
             </div>
-          ) : role === UserRole.DOCTOR ? (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
+          )}
+
+          {/* Doctor Form */}
+          {activeTab === UserRole.DOCTOR && (
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <KeyRound className="w-8 h-8" />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900">Doctor Access</h2>
+                <h2 className="text-2xl font-bold text-slate-900">Professional Access</h2>
                 <p className="text-slate-500 text-sm mt-1">
-                  Enter your credentials to access the clinical dashboard.
+                  Enter your credentials.
                 </p>
               </div>
 
               <div className="space-y-4">
-                 <input type="text" placeholder="Doctor ID" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                 <input 
-                    type="password" 
-                    placeholder="Password" 
-                    value={doctorPass}
-                    onChange={(e) => setDoctorPass(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleDoctorLogin()}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                 />
-                 <button 
+                <input type="text" placeholder="Doctor ID" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={doctorPass}
+                  onChange={(e) => setDoctorPass(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleDoctorLogin()}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
                   onClick={handleDoctorLogin}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-blue-200"
                 >
                   Access Dashboard
                 </button>
               </div>
-              
-              <button onClick={resetRole} className="w-full text-slate-400 text-sm hover:text-slate-600">Back</button>
             </div>
-          ) : null}
+          )}
+
         </div>
       </div>
     </div>

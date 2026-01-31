@@ -7,6 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { chatWithMedicalBot, fileToGenerativePart, verifySkinPhoto } from '../../services/geminiService';
 import { getPatient, addHistoryEntry } from '../../services/storageService';
 import { Message, AppNotification, HistoryEntry } from '../../types';
+import { toast } from 'sonner';
 
 const MOCK_DATA = [
   { day: 'Mon', score: 7 },
@@ -102,6 +103,7 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
         read: false
       };
       setNotifications(prev => [newNotif, ...prev]);
+      toast.info('New Appointment Reminder');
     }, 15000);
     return () => clearTimeout(timer);
   }, []);
@@ -136,6 +138,7 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const toastId = toast.loading('Uploading...');
     setUploading(true);
     try {
       const base64 = await fileToGenerativePart(file);
@@ -152,12 +155,13 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
 
         addHistoryEntry(patientId, newEntry);
         setHistory(prev => [newEntry, ...prev]);
+        toast.success("Photo added to medical log!", { id: toastId });
       } else {
-        alert("The AI could not verify this as a skin photo. Please try again with a clearer image.");
+        toast.error("Invalid photo. Please use a clearer image.", { id: toastId });
       }
     } catch (error) {
       console.error(error);
-      alert("Error verifying image.");
+      toast.error("Error verifying image.", { id: toastId });
     } finally {
       setUploading(false);
       e.target.value = ''; // Reset input
@@ -168,6 +172,7 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const toastId = toast.loading('Verifying...');
     setUploading(true);
     try {
       const base64 = await fileToGenerativePart(file);
@@ -187,13 +192,13 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
         addHistoryEntry(patientId, newEntry);
         setHistory(prev => [newEntry, ...prev]);
 
-        alert("Medication adherence recorded! Alarm disabled.");
+        toast.success("Adherence recorded! Alarm disabled.", { id: toastId });
       } else {
-        alert("That doesn't look like a skin photo. Please upload a valid photo to turn off the alarm.");
+        toast.error("Invalid photo. Please upload your treated area.", { id: toastId });
       }
     } catch (error) {
       console.error(error);
-      alert("Error verifying image.");
+      toast.error("Error verifying image.", { id: toastId });
     } finally {
       setUploading(false);
     }
@@ -287,8 +292,8 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
                       notifications.map(n => (
                         <div key={n.id} className={`p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors flex gap-3 ${!n.read ? 'bg-blue-50/30' : ''}`}>
                           <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${n.type === 'alert' ? 'bg-red-100 text-red-600' :
-                              n.type === 'info' ? 'bg-blue-100 text-blue-600' :
-                                n.type === 'reminder' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'
+                            n.type === 'info' ? 'bg-blue-100 text-blue-600' :
+                              n.type === 'reminder' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'
                             }`}>
                             {n.type === 'alert' ? <AlertTriangle className="w-4 h-4" /> :
                               n.type === 'info' ? <Info className="w-4 h-4" /> :
@@ -456,8 +461,8 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
               {messages.map((m) => (
                 <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed ${m.role === 'user'
-                      ? 'bg-teal-600 text-white rounded-br-none'
-                      : 'bg-white text-slate-700 shadow-sm border border-slate-100 rounded-bl-none'
+                    ? 'bg-teal-600 text-white rounded-br-none'
+                    : 'bg-white text-slate-700 shadow-sm border border-slate-100 rounded-bl-none'
                     }`}>
                     {m.text}
                   </div>

@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveCont
 import { analyzeLesion, cleanLesionImage } from '../../services/geminiService';
 import { getPatients, addPatient, addHistoryEntry } from '../../services/storageService';
 import { AnalysisResult, AppNotification, PatientRecord } from '../../types';
+import { toast } from 'sonner';
 
 const INITIAL_DOC_NOTIFICATIONS: AppNotification[] = [
   { id: 'd1', type: 'alert', title: 'Critical Lab Result', message: 'Pathology for Robert Smith requires immediate review.', timestamp: new Date(Date.now() - 1000 * 60 * 120), read: false },
@@ -65,6 +66,7 @@ const DoctorInterface: React.FC<DoctorInterfaceProps> = ({ onLogout }) => {
         read: false
       };
       setNotifications(prev => [newNotif, ...prev]);
+      toast.info('New Patient Upload: Maria Garcia');
     }, 10000);
     return () => clearTimeout(timer);
   }, []);
@@ -97,11 +99,13 @@ const DoctorInterface: React.FC<DoctorInterfaceProps> = ({ onLogout }) => {
       setShowAddModal(false);
       setNewPatientForm({ name: '', age: '', condition: 'Unknown' });
       handlePatientSelect(newPatient); // Auto select
+      toast.success(`Patient profile created for ${newPatient.name}`);
     }
   };
 
   const runAnalysis = async () => {
     if (!selectedPatient) return;
+    const toastId = toast.loading('Running CNN Analysis...');
     setAnalyzing(true);
 
     try {
@@ -128,10 +132,11 @@ const DoctorInterface: React.FC<DoctorInterfaceProps> = ({ onLogout }) => {
 
       // Refresh patient list to show updated status if changed
       setPatients(getPatients());
+      toast.success("Analysis Complete", { id: toastId });
 
     } catch (e) {
       console.error(e);
-      alert("Failed to analyze image.");
+      toast.error("Analysis Failed. Please try again.", { id: toastId });
     } finally {
       setAnalyzing(false);
     }
@@ -139,6 +144,7 @@ const DoctorInterface: React.FC<DoctorInterfaceProps> = ({ onLogout }) => {
 
   const runHairRemoval = async () => {
     if (!selectedPatient) return;
+    const toastId = toast.loading('Removing artifacts...');
     setCleaning(true);
     try {
       const resp = await fetch(selectedPatient.img);
@@ -153,12 +159,13 @@ const DoctorInterface: React.FC<DoctorInterfaceProps> = ({ onLogout }) => {
       if (cleanBase64) {
         setProcessedImage(`data:image/jpeg;base64,${cleanBase64}`);
         setViewMode('processed');
+        toast.success("Image enhanced", { id: toastId });
       } else {
-        alert("Could not process image.");
+        toast.error("Could not process image.", { id: toastId });
       }
     } catch (e) {
       console.error(e);
-      alert("Failed to process image.");
+      toast.error("Failed to process image.", { id: toastId });
     } finally {
       setCleaning(false);
     }
@@ -261,7 +268,7 @@ const DoctorInterface: React.FC<DoctorInterfaceProps> = ({ onLogout }) => {
                     notifications.map(n => (
                       <div key={n.id} className={`p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors flex gap-3 ${!n.read ? 'bg-blue-50/40' : ''}`}>
                         <div className={`mt-1 w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${n.type === 'alert' ? 'bg-red-100 text-red-600' :
-                            n.type === 'info' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
+                          n.type === 'info' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
                           }`}>
                           {n.type === 'alert' ? <AlertTriangle className="w-4 h-4" /> : <Info className="w-4 h-4" />}
                         </div>
@@ -332,7 +339,7 @@ const DoctorInterface: React.FC<DoctorInterfaceProps> = ({ onLogout }) => {
                       />
                       <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-white rounded-full flex items-center justify-center">
                         <div className={`w-2.5 h-2.5 rounded-full ${p.status === 'Critical' ? 'bg-red-500' :
-                            p.status === 'Stable' ? 'bg-blue-500' : 'bg-green-500'
+                          p.status === 'Stable' ? 'bg-blue-500' : 'bg-green-500'
                           }`}></div>
                       </div>
                     </button>
@@ -357,8 +364,8 @@ const DoctorInterface: React.FC<DoctorInterfaceProps> = ({ onLogout }) => {
                     </div>
                     <p className="text-xs text-slate-500 truncate">{p.condition}</p>
                     <div className={`mt-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${p.status === 'Critical' ? 'bg-red-50 text-red-700 border-red-200' :
-                        p.status === 'Improving' ? 'bg-green-50 text-green-700 border-green-200' :
-                          'bg-blue-50 text-blue-700 border-blue-200'
+                      p.status === 'Improving' ? 'bg-green-50 text-green-700 border-green-200' :
+                        'bg-blue-50 text-blue-700 border-blue-200'
                       }`}>
                       {p.status}
                     </div>

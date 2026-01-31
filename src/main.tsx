@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { AuthProvider } from './context/AuthContext';
 import App from './App';
 import './index.css';
 
@@ -12,8 +14,11 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <App />
+        <Toaster position="top-center" richColors />
+      </BrowserRouter>
+    </AuthProvider>
   </React.StrictMode>
 );
