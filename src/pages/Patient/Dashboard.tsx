@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Bell, Camera, Send, ShieldCheck, Activity, Calendar, 
+import {
+  Bell, Camera, Send, ShieldCheck, Activity, Calendar,
   UploadCloud, AlertCircle, CheckCircle, Clock, X, Info, AlertTriangle, LogOut
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { chatWithMedicalBot, fileToGenerativePart, verifySkinPhoto } from '../services/geminiService';
-import { getPatient, addHistoryEntry } from '../services/storageService';
-import { Message, AppNotification, HistoryEntry } from '../types';
+import { chatWithMedicalBot, fileToGenerativePart, verifySkinPhoto } from '../../services/geminiService';
+import { getPatient, addHistoryEntry } from '../../services/storageService';
+import { Message, AppNotification, HistoryEntry } from '../../types';
 
 const MOCK_DATA = [
   { day: 'Mon', score: 7 },
@@ -38,14 +38,14 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
   const [isTyping, setIsTyping] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [patientName, setPatientName] = useState('Patient');
-  
+
   // Storage State
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   // Notification State
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [showNotifications, setShowNotifications] = useState(false);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -53,11 +53,11 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
   useEffect(() => {
     const patientData = getPatient(patientId);
     if (patientData) {
-        setHistory(patientData.history);
-        setPatientName(patientData.name);
+      setHistory(patientData.history);
+      setPatientName(patientData.name);
     } else {
-        // Fallback or empty state if ID not found (e.g. wrong ID entered)
-        console.warn(`Patient ID ${patientId} not found`);
+      // Fallback or empty state if ID not found (e.g. wrong ID entered)
+      console.warn(`Patient ID ${patientId} not found`);
     }
   }, [patientId]);
 
@@ -114,7 +114,7 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
 
   const handleSendMessage = async () => {
     if (!inputMsg.trim()) return;
-    
+
     const userMsg: Message = { id: Date.now().toString(), role: 'user', text: inputMsg, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
     setInputMsg('');
@@ -126,7 +126,7 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
     }));
 
     const responseText = await chatWithMedicalBot(history, userMsg.text);
-    
+
     const botMsg: Message = { id: (Date.now() + 1).toString(), role: 'model', text: responseText || "I'm currently offline.", timestamp: new Date() };
     setMessages(prev => [...prev, botMsg]);
     setIsTyping(false);
@@ -138,29 +138,29 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
 
     setUploading(true);
     try {
-        const base64 = await fileToGenerativePart(file);
-        const isValid = await verifySkinPhoto(base64);
-        
-        if (isValid) {
-            // SAVE TO BACKEND
-            const newEntry: HistoryEntry = {
-                date: new Date().toISOString().split('T')[0],
-                imageUrl: `data:image/jpeg;base64,${base64}`,
-                notes: 'Self-reported progress photo',
-                severityScore: 0, 
-            };
-            
-            addHistoryEntry(patientId, newEntry);
-            setHistory(prev => [newEntry, ...prev]);
-        } else {
-            alert("The AI could not verify this as a skin photo. Please try again with a clearer image.");
-        }
+      const base64 = await fileToGenerativePart(file);
+      const isValid = await verifySkinPhoto(base64);
+
+      if (isValid) {
+        // SAVE TO BACKEND
+        const newEntry: HistoryEntry = {
+          date: new Date().toISOString().split('T')[0],
+          imageUrl: `data:image/jpeg;base64,${base64}`,
+          notes: 'Self-reported progress photo',
+          severityScore: 0,
+        };
+
+        addHistoryEntry(patientId, newEntry);
+        setHistory(prev => [newEntry, ...prev]);
+      } else {
+        alert("The AI could not verify this as a skin photo. Please try again with a clearer image.");
+      }
     } catch (error) {
-        console.error(error);
-        alert("Error verifying image.");
+      console.error(error);
+      alert("Error verifying image.");
     } finally {
-        setUploading(false);
-        e.target.value = ''; // Reset input
+      setUploading(false);
+      e.target.value = ''; // Reset input
     }
   };
 
@@ -170,32 +170,32 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
 
     setUploading(true);
     try {
-        const base64 = await fileToGenerativePart(file);
-        const isValid = await verifySkinPhoto(base64);
-        
-        if (isValid) {
-            setAlarmActive(false);
+      const base64 = await fileToGenerativePart(file);
+      const isValid = await verifySkinPhoto(base64);
 
-            // SAVE TO BACKEND
-            const newEntry: HistoryEntry = {
-                date: new Date().toISOString().split('T')[0],
-                imageUrl: `data:image/jpeg;base64,${base64}`,
-                notes: 'Medication Adherence Check-in (Smart Alarm)',
-                severityScore: 0, // Not applicable for simple adherence check
-            };
-            
-            addHistoryEntry(patientId, newEntry);
-            setHistory(prev => [newEntry, ...prev]);
+      if (isValid) {
+        setAlarmActive(false);
 
-            alert("Medication adherence recorded! Alarm disabled.");
-        } else {
-            alert("That doesn't look like a skin photo. Please upload a valid photo to turn off the alarm.");
-        }
+        // SAVE TO BACKEND
+        const newEntry: HistoryEntry = {
+          date: new Date().toISOString().split('T')[0],
+          imageUrl: `data:image/jpeg;base64,${base64}`,
+          notes: 'Medication Adherence Check-in (Smart Alarm)',
+          severityScore: 0, // Not applicable for simple adherence check
+        };
+
+        addHistoryEntry(patientId, newEntry);
+        setHistory(prev => [newEntry, ...prev]);
+
+        alert("Medication adherence recorded! Alarm disabled.");
+      } else {
+        alert("That doesn't look like a skin photo. Please upload a valid photo to turn off the alarm.");
+      }
     } catch (error) {
-        console.error(error);
-        alert("Error verifying image.");
+      console.error(error);
+      alert("Error verifying image.");
     } finally {
-        setUploading(false);
+      setUploading(false);
     }
   };
 
@@ -223,16 +223,16 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
             <p className="text-slate-600">
               The Smart Alarm is active. To turn it off and record your adherence, please take a clear photo of your treated area.
             </p>
-            
+
             <div className="pt-4">
               <label className="cursor-pointer bg-slate-900 text-white hover:bg-slate-800 transition-colors py-4 px-6 rounded-xl flex items-center justify-center gap-2 font-semibold text-lg shadow-lg">
                 {uploading ? (
-                    <span>Verifying Photo...</span>
+                  <span>Verifying Photo...</span>
                 ) : (
-                    <>
-                        <Camera className="w-6 h-6" />
-                        <span>Upload Proof to Dismiss</span>
-                    </>
+                  <>
+                    <Camera className="w-6 h-6" />
+                    <span>Upload Proof to Dismiss</span>
+                  </>
                 )}
                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleAlarmUpload} disabled={uploading} />
               </label>
@@ -256,7 +256,7 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
 
             {/* Notification Bell */}
             <div className="relative" ref={notificationRef}>
-              <button 
+              <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="w-10 h-10 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-colors relative"
               >
@@ -286,14 +286,13 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
                     ) : (
                       notifications.map(n => (
                         <div key={n.id} className={`p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors flex gap-3 ${!n.read ? 'bg-blue-50/30' : ''}`}>
-                          <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            n.type === 'alert' ? 'bg-red-100 text-red-600' :
-                            n.type === 'info' ? 'bg-blue-100 text-blue-600' :
-                            n.type === 'reminder' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'
-                          }`}>
+                          <div className={`mt-1 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${n.type === 'alert' ? 'bg-red-100 text-red-600' :
+                              n.type === 'info' ? 'bg-blue-100 text-blue-600' :
+                                n.type === 'reminder' ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-600'
+                            }`}>
                             {n.type === 'alert' ? <AlertTriangle className="w-4 h-4" /> :
-                             n.type === 'info' ? <Info className="w-4 h-4" /> :
-                             n.type === 'reminder' ? <Clock className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                              n.type === 'info' ? <Info className="w-4 h-4" /> :
+                                n.type === 'reminder' ? <Clock className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
                           </div>
                           <div className="flex-1">
                             <div className="flex justify-between items-start">
@@ -316,22 +315,22 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
             </div>
 
             <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm flex items-center justify-center font-bold text-slate-500 text-lg">
-                {patientName.charAt(0)}
+              {patientName.charAt(0)}
             </div>
 
-            <button 
-                onClick={onLogout}
-                className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors md:hidden"
-                title="Logout"
+            <button
+              onClick={onLogout}
+              className="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors md:hidden"
+              title="Logout"
             >
-                <LogOut className="w-5 h-5" />
+              <LogOut className="w-5 h-5" />
             </button>
-            <button 
-                onClick={onLogout}
-                className="hidden md:flex items-center gap-2 text-slate-500 hover:text-red-600 text-sm font-medium transition-colors"
+            <button
+              onClick={onLogout}
+              className="hidden md:flex items-center gap-2 text-slate-500 hover:text-red-600 text-sm font-medium transition-colors"
             >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
             </button>
           </div>
         </div>
@@ -339,16 +338,16 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
 
       {/* Content */}
       <main className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
-        
+
         {/* Navigation Tabs (Mobile mostly) */}
         <div className="flex md:hidden bg-white p-1 rounded-xl shadow-sm border border-slate-200 mb-4">
-          <button 
+          <button
             onClick={() => setActiveTab('dashboard')}
             className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-teal-50 text-teal-700' : 'text-slate-500'}`}
           >
             Dashboard
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('chat')}
             className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${activeTab === 'chat' ? 'bg-teal-50 text-teal-700' : 'text-slate-500'}`}
           >
@@ -377,7 +376,7 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
                 <div className="text-2xl font-bold text-slate-800">12 Days</div>
                 <div className="text-xs text-slate-500">Medication Adherence</div>
               </div>
-               <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 hidden sm:block">
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 hidden sm:block">
                 <div className="flex items-center gap-2 text-orange-600 mb-2">
                   <Clock className="w-5 h-5" />
                   <span className="font-semibold text-sm">Next Dose</span>
@@ -394,10 +393,10 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={MOCK_DATA}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                    <Line type="monotone" dataKey="score" stroke="#0d9488" strokeWidth={3} dot={{fill: '#0d9488', r: 4, strokeWidth: 0}} activeDot={{r: 6}} />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Line type="monotone" dataKey="score" stroke="#0d9488" strokeWidth={3} dot={{ fill: '#0d9488', r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -408,13 +407,13 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-lg text-slate-800">Medical Log</h3>
                 <label className={`flex items-center gap-2 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-sm font-medium hover:bg-teal-100 transition-colors cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {uploading ? (
-                        <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                        <Camera className="w-4 h-4" />
-                    )}
-                    <span>{uploading ? 'Analyzing...' : 'Add Photo'}</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleManualUpload} disabled={uploading} />
+                  {uploading ? (
+                    <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Camera className="w-4 h-4" />
+                  )}
+                  <span>{uploading ? 'Analyzing...' : 'Add Photo'}</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleManualUpload} disabled={uploading} />
                 </label>
               </div>
               <div className="space-y-4">
@@ -435,9 +434,9 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
                     </div>
                   </div>
                 )) : (
-                    <div className="text-center py-8 text-slate-400">
-                        <p>No medical history recorded yet.</p>
-                    </div>
+                  <div className="text-center py-8 text-slate-400">
+                    <p>No medical history recorded yet.</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -452,15 +451,14 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
               </div>
               <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">Personal Assistant</span>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50" ref={scrollRef}>
               {messages.map((m) => (
                 <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed ${
-                    m.role === 'user' 
-                      ? 'bg-teal-600 text-white rounded-br-none' 
+                  <div className={`max-w-[85%] rounded-2xl p-3 text-sm leading-relaxed ${m.role === 'user'
+                      ? 'bg-teal-600 text-white rounded-br-none'
                       : 'bg-white text-slate-700 shadow-sm border border-slate-100 rounded-bl-none'
-                  }`}>
+                    }`}>
                     {m.text}
                   </div>
                 </div>
@@ -488,7 +486,7 @@ const PatientInterface: React.FC<PatientInterfaceProps> = ({ onLogout, patientId
                   placeholder="Type a message..."
                   className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                 />
-                <button 
+                <button
                   onClick={handleSendMessage}
                   disabled={!inputMsg.trim() || isTyping}
                   className="bg-teal-600 text-white p-2 rounded-xl hover:bg-teal-700 transition-colors disabled:opacity-50"
