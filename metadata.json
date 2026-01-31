@@ -1,0 +1,7 @@
+{
+  "name": "DermoLink AI",
+  "description": "A commercial-grade skin lesion analyzer connecting patients and dermatologists with Smart Alarm adherence and AI-powered diagnostics.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
